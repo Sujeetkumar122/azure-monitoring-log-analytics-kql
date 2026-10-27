@@ -1,0 +1,24 @@
+// Useful Log Analytics KQL Queries for Azure Infrastructure
+
+// 1. Virtual Machines with High CPU (> 80%)
+Perf
+| where TimeGenerated > ago(1h)
+| where ObjectName == "Processor" and CounterName == "% Processor Time" and InstanceName == "_Total"
+| summarize AvgCPU = avg(CounterValue) by Computer, bin(TimeGenerated, 5m)
+| where AvgCPU > 80
+| order by AvgCPU desc
+
+// 2. Virtual Machines with Low Disk Free Space (< 15%)
+Perf
+| where TimeGenerated > ago(1h)
+| where ObjectName == "LogicalDisk" and CounterName == "% Free Space"
+| summarize MinFreeSpace = min(CounterValue) by Computer, InstanceName
+| where MinFreeSpace < 15
+| order by MinFreeSpace asc
+
+// 3. Failed Azure Administrative Activity Logs
+AzureActivity
+| where TimeGenerated > ago(24h)
+| where ActivityStatusValue in ("Failed", "Failure")
+| project TimeGenerated, SubscriptionId, ResourceGroup, Resource, OperationNameValue, Caller
+| order by TimeGenerated desc
